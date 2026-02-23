@@ -49,7 +49,35 @@ def var_elimination(factors, observations, query_name, var_order):
       of the query.
     """
     #TODO
-    
+    new_factors = factors
+    # Contents of this method made referencing CMPUT261 "Class notes (BayesInterference)"
+    for var in var_order:
+        # Collect factors that mention the value being worked on
+        hold = []
+        for fac in new_factors:
+            if var in fac.names:
+                hold.append(fac)
+        # If var is the queried variable, skip operations
+        if (var != query_name):
+            # If node is an observed variable, condition the factors
+            if var in observations.keys():
+                for fac in hold:
+                    f = fac.condition(var, observations[var])
+                    new_factors.remove(fac)
+                    new_factors.append(f)
+            # Else sum it out
+            else:
+                for fac in hold:
+                    f = fac.sum_out(var)
+                    new_factors.remove(fac)
+                    new_factors.append(f)    
+        
+    # Take the product of remaining factors
+    final = new_factors.pop(0)
+    for fac in new_factors:
+        final = final*fac
+        
+    return final.normalize()
 
 def example_bn():
     """
@@ -57,12 +85,67 @@ def example_bn():
     in the assignment.
     """
     return [
-        # Pr(A) just an example
+        # TODO [COMPLETE?]
+        #P(A)
         Factor({'A': (0,1)},
                ((0, 0.25),
                 (1, 0.75))),
-
-        # TODO
+        #P(B|A)
+        Factor({'B': (0,1), 'A': (0,1)},
+               ((0, 0, 1),
+                (0, 1, 0.5),
+                (1, 0, 0),
+                (1, 1, 0.5))),
+        #P(C|B,A)
+        Factor({'C': (0,1), 'B': (0,1), 'A': (0,1)},
+               ((0, 0, 0, 1),
+                (0, 0, 1, 0.5),
+                (0, 1, 0, 0.5),
+                (0, 1, 1, 0.25),
+                (1, 0, 0, 0),
+                (1, 0, 1, 0.5),
+                (1, 1, 0, 0.5),
+                (1, 1, 1, 0.75))),
+        #P(D|C,A)
+        Factor({'D': (0,1), 'C': (0,1), 'A': (0,1)},
+               ((0, 0, 0, 1),
+                (0, 0, 1, 0.5),
+                (0, 1, 0, 0.5),
+                (0, 1, 1, 0.25),
+                (1, 0, 0, 0),
+                (1, 0, 1, 0.5),
+                (1, 1, 0, 0.5),
+                (1, 1, 1, 0.75))),
+        #P(E|D,A)
+        Factor({'E': (0,1), 'D': (0,1), 'A': (0,1)},
+               ((0, 0, 0, 1),
+                (0, 0, 1, 0.5),
+                (0, 1, 0, 0.5),
+                (0, 1, 1, 0.25),
+                (1, 0, 0, 0),
+                (1, 0, 1, 0.5),
+                (1, 1, 0, 0.5),
+                (1, 1, 1, 0.75))),
+        #P(F|C,B)
+        Factor({'F': (0,1), 'C': (0,1), 'B': (0,1)},
+               ((0, 0, 0, 1),
+                (0, 0, 1, 0.5),
+                (0, 1, 0, 0.5),
+                (0, 1, 1, 0.25),
+                (1, 0, 0, 0),
+                (1, 0, 1, 0.5),
+                (1, 1, 0, 0.5),
+                (1, 1, 1, 0.75))),
+        #P(G|F,E)
+        Factor({'G': (0,1), 'F': (0,1), 'E': (0,1)},
+               ((0, 0, 0, 1),
+                (0, 0, 1, 0.5),
+                (0, 1, 0, 0.5),
+                (0, 1, 1, 0.25),
+                (1, 0, 0, 0),
+                (1, 0, 1, 0.5),
+                (1, 1, 0, 0.5),
+                (1, 1, 1, 0.75))),
         ]
 
 class Factor(object):
@@ -117,7 +200,7 @@ class Factor(object):
         for key in self.keys:
                 new_key = list(key)
                 del new_key[j]
-                print(self[key])
+                # print(self[key])
                 new_f[tuple(new_key)] += self[key]
         return new_f
 
@@ -238,7 +321,6 @@ def unit_tests():
         assert False, "expected error"
     except:
         pass
-    
     h = f.condition('x', 3)
     assert len(h.keys) == 2
     assert h.names == ('y',)
@@ -312,6 +394,7 @@ def main():
     factors = example_bn()
     solution = var_elimination(factors, {'E':0, 'F':1}, 'C',
                                ['E','F','A','B','C','D','G'])
+    
 
     print(solution)
     print(f"P(C=1 | E=0, F=1) = {solution[1]}")
